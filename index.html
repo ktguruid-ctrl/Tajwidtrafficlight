@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TAJWID TRAFFIC LIGHT — Stop, Think, Read!</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;800&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #1e293b; /* Dark slate background to contrast the 16:9 game area */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        h1, h2, h3, .heading-font {
+            font-family: 'Fredoka One', cursive;
+        }
+
+        .arabic-text {
+            font-family: 'Amiri', serif;
+            line-height: 1.8;
+            direction: rtl;
+        }
+
+        /* 16:9 Aspect Ratio Container */
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 1280px;
+            aspect-ratio: 16 / 9;
+            background-color: #87CEEB; /* Sky blue */
+            border-radius: 1rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+        }
+
+        /* Background City Elements */
+        .city-bg {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 40%;
+            background: linear-gradient(to top, #71717a 0%, #71717a 30%, transparent 30%); /* Road */
+            z-index: 0;
+        }
+        
+        .road-lines {
+            position: absolute;
+            bottom: 15%;
+            width: 200%;
+            height: 10px;
+            background-image: repeating-linear-gradient(90deg, #fff 0, #fff 50px, transparent 50px, transparent 100px);
+            animation: moveRoad 10s linear infinite;
+        }
+
+        @keyframes moveRoad {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        .building {
+            position: absolute;
+            bottom: 30%;
+            background-color: #4ade80;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+            z-index: -1;
+        }
+
+        /* Slide Transition */
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease-in-out;
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+        }
+
+        .slide.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* UI Elements */
+        .btn-custom {
+            transition: all 0.2s;
+            box-shadow: 0 4px 0 #00000033;
+        }
+        .btn-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 0 #00000033;
+        }
+        .btn-custom:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #00000033;
+        }
+
+        /* Traffic Light Game Buttons */
+        .traffic-btn {
+            position: relative;
+            overflow: hidden;
+        }
+        .traffic-btn::before {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: 10px;
+            width: 20px;
+            height: 10px;
+            background: rgba(255,255,255,0.4);
+            border-radius: 10px;
+        }
+
+        /* Animations */
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .animate-bounce-slow {
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes drive {
+            0% { transform: translateX(100vw); }
+            100% { transform: translateX(-200px); }
+        }
+        .car-anim {
+            position: absolute;
+            bottom: 5%;
+            animation: drive 8s linear infinite;
+        }
+
+        /* Modal / Feedback Overlay */
+        #feedback-overlay {
+            backdrop-filter: blur(4px);
+            display: none;
+        }
+        #feedback-overlay.show {
+            display: flex;
+        }
+
+        /* Heart (Nyawa) */
+        .heart {
+            color: #ef4444;
+            transition: all 0.3s;
+        }
+        .heart.lost {
+            color: #9ca3af;
+            transform: scale(0.8);
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        
+        <!-- Scenery Background -->
+        <div class="city-bg">
+            <!-- Decorative Buildings -->
+            <div class="building" style="left: 10%; width: 80px; height: 150px; background-color: #3b82f6;"></div>
+            <div class="building" style="left: 25%; width: 120px; height: 200px; background-color: #f59e0b;"></div>
+            <div class="building" style="left: 45%; width: 100px; height: 120px; background-color: #ec4899;"></div>
+            <div class="building" style="left: 65%; width: 150px; height: 180px; background-color: #8b5cf6;"></div>
+            <div class="building" style="left: 85%; width: 90px; height: 160px; background-color: #10b981;"></div>
+            <div class="road-lines"></div>
+        </div>
+
+        <!-- Decorative Car -->
+        <div class="car-anim z-0" style="font-size: 4rem; color: #ef4444; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">
+            <i class="fa-solid fa-car-side"></i>
+        </div>
+        <div class="car-anim z-0" style="font-size: 3rem; color: #3b82f6; animation-delay: 4s; bottom: 15%; animation-duration: 6s; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">
+            <i class="fa-solid fa-truck"></i>
+        </div>
+
+        <!-- HUD (Heads Up Display) -->
+        <div id="hud" class="absolute top-4 left-4 right-4 flex justify-between items-start z-50 hidden">
+            <div class="bg-white/90 px-4 py-2 rounded-xl shadow-lg border-2 border-gray-200">
+                <div class="text-xl font-bold text-gray-800">Skor: <span id="score-display" class="text-blue-600">0</span></div>
+            </div>
+            <div class="bg-white/90 px-4 py-2 rounded-xl shadow-lg border-2 border-gray-200 flex gap-2 text-2xl">
+                <i class="fa-solid fa-heart heart" id="heart-1"></i>
+                <i class="fa-solid fa-heart heart" id="heart-2"></i>
+                <i class="fa-solid fa-heart heart" id="heart-3"></i>
+            </div>
+        </div>
+
+        <!-- Slide 1: Cover -->
+        <div class="slide active p-8" id="slide-1">
+            <div class="flex-1 flex flex-col items-center justify-center text-center mt-10">
+                <div class="bg-white/90 p-8 rounded-3xl shadow-2xl border-4 border-yellow-400 max-w-3xl relative">
+                    <!-- Traffic Light Decour -->
+                    <div class="absolute -top-16 -left-10 bg-gray-800 p-3 rounded-2xl border-4 border-gray-700 shadow-xl w-24">
+                        <div class="w-12 h-12 bg-red-500 rounded-full mx-auto mb-2 shadow-[0_0_15px_#ef4444]"></div>
+                        <div class="w-12 h-12 bg-yellow-400 rounded-full mx-auto mb-2 shadow-[0_0_15px_#facc15]"></div>
+                        <div class="w-12 h-12 bg-green-500 rounded-full mx-auto shadow-[0_0_15px_#22c55e]"></div>
+                    </div>
+                    
+                    <!-- Police Character -->
+                    <div class="absolute -top-20 -right-10 text-8xl animate-bounce-slow text-blue-800">
+                        <i class="fa-solid fa-user-shield drop-shadow-lg"></i>
+                    </div>
+
+                    <h1 class="text-5xl md:text-6xl text-gray-800 mb-4 drop-shadow-md">
+                        <span class="text-red-500">TAJWID</span> 
+                        <span class="text-yellow-500">TRAFFIC</span> 
+                        <span class="text-green-500">LIGHT</span>
+                    </h1>
+                    <h2 class="text-2xl text-gray-600 mb-8 font-bold">— Stop, Think, Read! —</h2>
+                    <p class="text-lg text-gray-700 mb-8 font-semibold">Petualangan Belajar Hukum Nun Sukun & Tanwin bersama Pak Polisi Tajwid!</p>
+                    
+                    <button onclick="goToSlide(2)" class="btn-custom bg-blue-500 hover:bg-blue-600 text-white text-2xl font-bold py-4 px-12 rounded-full heading-font inline-flex items-center gap-3">
+                        <i class="fa-solid fa-play"></i> MULAI MAIN
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 2: Petunjuk -->
+        <div class="slide p-8" id="slide-2">
+            <div class="bg-white/95 w-full h-full rounded-3xl shadow-2xl border-4 border-blue-400 flex flex-col p-8 relative overflow-hidden">
+                <div class="absolute top-4 right-4 text-6xl text-blue-200 opacity-50"><i class="fa-solid fa-circle-info"></i></div>
+                <h2 class="text-4xl text-blue-600 mb-6 heading-font border-b-4 border-blue-200 pb-2 inline-block">Cara Bermain</h2>
+                
+                <div class="flex-1 flex gap-8 items-center">
+                    <div class="w-1/3 flex justify-center text-9xl text-blue-800">
+                        <i class="fa-solid fa-user-shield"></i>
+                    </div>
+                    <div class="w-2/3 space-y-6 text-xl text-gray-700 font-semibold">
+                        <p class="flex items-start gap-4">
+                            <span class="bg-blue-100 text-blue-600 w-10 h-10 rounded-full flex items-center justify-center shrink-0 border-2 border-blue-400">1</span>
+                            Baca potongan ayat Al-Qur'an yang muncul di layar.
+                        </p>
+                        <p class="flex items-start gap-4">
+                            <span class="bg-yellow-100 text-yellow-600 w-10 h-10 rounded-full flex items-center justify-center shrink-0 border-2 border-yellow-400">2</span>
+                            Perhatikan hukum <strong>Nun Sukun (نْ)</strong> atau <strong>Tanwin (ـً ـٍ ـٌ)</strong>.
+                        </p>
+                        <p class="flex items-start gap-4">
+                            <span class="bg-green-100 text-green-600 w-10 h-10 rounded-full flex items-center justify-center shrink-0 border-2 border-green-400">3</span>
+                            Pilih tombol jawaban yang tepat seperti rambu lalu lintas!
+                        </p>
+                        
+                        <div class="bg-gray-100 p-4 rounded-xl mt-6 border-2 border-dashed border-gray-400">
+                            <h3 class="text-lg font-bold mb-2">Arti Warna Tombol di Game Ini:</h3>
+                            <div class="flex gap-4">
+                                <span class="bg-green-500 text-white px-3 py-1 rounded shadow"><i class="fa-solid fa-check"></i> Hijau = Tepat!</span>
+                                <span class="bg-yellow-400 text-gray-900 px-3 py-1 rounded shadow"><i class="fa-solid fa-triangle-exclamation"></i> Kuning = Pikirkan Lagi</span>
+                                <span class="bg-red-500 text-white px-3 py-1 rounded shadow"><i class="fa-solid fa-xmark"></i> Merah = Belum Tepat</span>
+                            </div>
+                            <p class="text-sm mt-2 text-gray-500 italic">*Warna ini hanya simbol game, bukan warna standar kaidah tajwid Al-Qur'an.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-between mt-4">
+                    <button onclick="goToSlide(1)" class="btn-custom bg-gray-400 hover:bg-gray-500 text-white font-bold py-3 px-8 rounded-full">
+                        <i class="fa-solid fa-arrow-left"></i> Kembali
+                    </button>
+                    <button onclick="goToSlide(3)" class="btn-custom bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-full text-xl">
+                        Materi Ringkas <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: Materi Ringkas -->
+        <div class="slide p-6" id="slide-3">
+             <div class="bg-white/95 w-full h-full rounded-3xl shadow-2xl border-4 border-yellow-400 flex flex-col p-6 overflow-hidden">
+                <h2 class="text-3xl text-yellow-600 mb-4 heading-font text-center"><i class="fa-solid fa-book-open"></i> Peta Tajwid: Nun Sukun & Tanwin</h2>
+                
+                <div class="grid grid-cols-2 gap-4 flex-1">
+                    <!-- Izhar -->
+                    <div class="bg-blue-50 p-4 rounded-xl border-2 border-blue-200">
+                        <h3 class="font-bold text-xl text-blue-700 mb-1">1. Izhar Halqi (Jelas)</h3>
+                        <p class="text-sm text-gray-700 mb-1">Nun sukun/tanwin bertemu huruf tenggorokan:</p>
+                        <p class="arabic-text text-2xl text-center text-blue-900 font-bold">ء ، هـ ، ع ، ح ، غ ، خ</p>
+                    </div>
+                    
+                    <!-- Iqlab -->
+                    <div class="bg-green-50 p-4 rounded-xl border-2 border-green-200">
+                        <h3 class="font-bold text-xl text-green-700 mb-1">2. Iqlab (Tukar ke Mim)</h3>
+                        <p class="text-sm text-gray-700 mb-1">Nun sukun/tanwin bertemu huruf Ba. Disertai dengung:</p>
+                        <p class="arabic-text text-2xl text-center text-green-900 font-bold">ب</p>
+                    </div>
+
+                    <!-- Idgham -->
+                    <div class="bg-yellow-50 p-4 rounded-xl border-2 border-yellow-200 col-span-2 flex flex-col">
+                        <h3 class="font-bold text-xl text-yellow-700 mb-1">3. Idgham (Masuk / Lebur)</h3>
+                        <div class="flex gap-4">
+                            <div class="flex-1 bg-white p-2 rounded border border-yellow-100">
+                                <span class="font-bold text-sm text-purple-600">Bighunnah (Dengung)</span>
+                                <p class="arabic-text text-2xl text-center mt-1">ي ، ن ، م ، و</p>
+                            </div>
+                            <div class="flex-1 bg-white p-2 rounded border border-yellow-100">
+                                <span class="font-bold text-sm text-orange-600">Bilaghunnah (Tanpa Dengung)</span>
+                                <p class="arabic-text text-2xl text-center mt-1">ل ، ر</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ikhfa -->
+                    <div class="bg-red-50 p-4 rounded-xl border-2 border-red-200 col-span-2">
+                        <h3 class="font-bold text-xl text-red-700 mb-1">4. Ikhfa Haqiqi (Samar & Dengung)</h3>
+                        <p class="text-sm text-gray-700 mb-1">Nun sukun/tanwin bertemu sisa 15 huruf hijaiyah lainnya.</p>
+                        <p class="arabic-text text-xl text-center text-red-900">ت ث ج د ذ ز س ش ص ض ط ظ ف ق ك</p>
+                    </div>
+                </div>
+
+                <div class="flex justify-between mt-4">
+                    <button onclick="goToSlide(2)" class="btn-custom bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-full">
+                        <i class="fa-solid fa-arrow-left"></i> Kembali
+                    </button>
+                    <button onclick="startGames()" class="btn-custom bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-8 rounded-full text-xl animate-pulse">
+                        Mulai Tantangan! <i class="fa-solid fa-car"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Slides Container (will be populated dynamically) -->
+        <div id="quiz-container">
+            <!-- Slide 4: Tantangan 1 -->
+            <div class="slide p-6" id="slide-4"></div>
+            <!-- Slide 5: Tantangan 2 -->
+            <div class="slide p-6" id="slide-5"></div>
+            <!-- Slide 6: Tantangan 3 -->
+            <div class="slide p-6" id="slide-6"></div>
+            <!-- Slide 7: Tantangan 4 -->
+            <div class="slide p-6" id="slide-7"></div>
+            <!-- Slide 8: Tantangan 5 -->
+            <div class="slide p-6" id="slide-8"></div>
+        </div>
+
+        <!-- Slide 9: Transisi Latihan Tambahan -->
+        <div class="slide p-8" id="slide-9">
+            <div class="bg-white/95 w-full h-full rounded-3xl shadow-2xl border-4 border-indigo-400 flex flex-col items-center justify-center p-8 relative">
+                <div class="text-8xl text-indigo-500 mb-6"><i class="fa-solid fa-gas-pump"></i></div>
+                <h2 class="text-5xl text-indigo-600 mb-4 heading-font">Isi Bensin Dulu!</h2>
+                <p class="text-2xl text-gray-700 mb-8 text-center max-w-2xl">
+                    Kerja bagus! Kamu sudah melewati jalan utama. Sekarang ada 2 rintangan ekstra di depan. Siap melaju?
+                </p>
+                <div class="flex gap-4">
+                     <button onclick="goToSlide(10)" class="btn-custom bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-4 px-10 rounded-full text-2xl">
+                        Gas Pol! <i class="fa-solid fa-forward"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Additional Game Slides -->
+        <div class="slide p-6" id="slide-10"></div> <!-- Bonus 1 -->
+        <div class="slide p-6" id="slide-11"></div> <!-- Bonus 2 -->
+
+        <!-- Slide 12: Reward & Akhir -->
+        <div class="slide p-8" id="slide-12">
+            <div class="bg-gradient-to-br from-yellow-100 to-yellow-300 w-full h-full rounded-3xl shadow-2xl border-8 border-yellow-500 flex flex-col items-center justify-center p-8 relative overflow-hidden">
+                
+                <!-- Confetti Background (CSS based) -->
+                <div class="absolute inset-0 pointer-events-none opacity-50" style="background-image: radial-gradient(#ef4444 2px, transparent 2px), radial-gradient(#3b82f6 2px, transparent 2px), radial-gradient(#22c55e 2px, transparent 2px); background-size: 30px 30px, 40px 40px, 50px 50px; background-position: 0 0, 15px 15px, 25px 25px; animation: moveRoad 20s linear infinite;"></div>
+
+                <div class="bg-white p-8 rounded-3xl shadow-xl text-center z-10 relative">
+                    <div class="absolute -top-16 left-1/2 transform -translate-x-1/2">
+                        <div class="bg-yellow-400 w-32 h-32 rounded-full flex items-center justify-center border-4 border-white shadow-lg">
+                            <i class="fa-solid fa-award text-6xl text-yellow-700"></i>
+                        </div>
+                    </div>
+                    
+                    <h2 class="text-4xl text-gray-800 mb-2 mt-12 heading-font">Selamat!</h2>
+                    <p class="text-xl text-gray-600 mb-4">Kamu telah menyelesaikan petualangan.</p>
+                    
+                    <div class="bg-gray-100 py-4 px-8 rounded-2xl mb-6 inline-block">
+                        <p class="text-gray-500 text-lg font-bold">Skor Akhir:</p>
+                        <p class="text-6xl heading-font text-blue-600" id="final-score">0</p>
+                    </div>
+
+                    <h3 class="text-3xl text-yellow-600 font-bold heading-font mb-2">Lencana: Tajwid Explorer</h3>
+                    <p class="text-md text-gray-600 mb-8 max-w-md mx-auto">Teruslah berlatih membaca Al-Qur'an dengan tartil dan perhatikan rambu-rambu tajwidnya ya!</p>
+                    
+                    <button onclick="resetGame()" class="btn-custom bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-full text-xl inline-flex items-center gap-2">
+                        <i class="fa-solid fa-rotate-right"></i> Main Lagi
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feedback Overlay (Modal) -->
+        <div id="feedback-overlay" class="absolute inset-0 bg-black/60 z-50 hidden items-center justify-center p-4">
+            <div id="feedback-card" class="bg-white rounded-3xl shadow-2xl p-8 max-w-lg w-full transform scale-90 transition-transform duration-300 flex flex-col items-center text-center">
+                <div id="feedback-icon" class="text-7xl mb-4"></div>
+                <h2 id="feedback-title" class="text-3xl heading-font mb-2"></h2>
+                <p id="feedback-msg" class="text-lg text-gray-700 mb-6 font-semibold"></p>
+                <div id="feedback-detail" class="bg-gray-100 p-4 rounded-xl mb-6 w-full text-left text-gray-800 hidden"></div>
+                <button id="feedback-btn" class="btn-custom bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-10 rounded-full text-xl w-full">
+                    Lanjut <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Data Pertanyaan (100% Akurat sesuai kaidah)
+        const questions = [
+            // Slide 4: Tantangan 1 - Izhar Halqi
+            {
+                text: "فَصَلِّ لِرَبِّكَ وَانْحَرْۗ",
+                surah: "QS. Al-Kautsar: 2",
+                highlight: "وَانْحَرْۗ",
+                hukum: "Izhar Halqi",
+                options: ["Izhar Halqi", "Idgham Bighunnah", "Ikhfa", "Iqlab"],
+                correctIndex: 0,
+                explanation: "Terdapat <strong>Nun Sukun (نْ)</strong> bertemu dengan huruf <strong>Ha (ح)</strong>. Dibaca jelas tanpa dengung."
+            },
+            // Slide 5: Tantangan 2 - Idgham Bighunnah
+            {
+                text: "غِشَاوَةٌ وَلَهُمْ",
+                surah: "QS. Al-Baqarah: 7",
+                highlight: "غِشَاوَةٌ وَ",
+                hukum: "Idgham Bighunnah",
+                options: ["Izhar Halqi", "Idgham Bilaghunnah", "Idgham Bighunnah", "Iqlab"],
+                correctIndex: 2,
+                explanation: "Terdapat <strong>Dhommah Tanwin (ـٌ)</strong> bertemu huruf <strong>Waw (و)</strong>. Suara masuk ke huruf Waw dengan dengung."
+            },
+            // Slide 6: Tantangan 3 - Idgham Bilaghunnah
+            {
+                text: "وَلَمْ يَكُنْ لَّهُ كُفُوًا أَحَدٌ",
+                surah: "QS. Al-Ikhlas: 4",
+                highlight: "يَكُنْ لَّهُ",
+                hukum: "Idgham Bilaghunnah",
+                options: ["Ikhfa", "Idgham Bilaghunnah", "Izhar Halqi", "Idgham Bighunnah"],
+                correctIndex: 1,
+                explanation: "Terdapat <strong>Nun Sukun (نْ)</strong> bertemu huruf <strong>Lam (ل)</strong>. Suara masuk ke Lam secara sempurna tanpa dengung (Yakul-lahu)."
+            },
+            // Slide 7: Tantangan 4 - Iqlab
+            {
+                text: "مِنْۢ بَعْدِ",
+                surah: "Banyak di Al-Qur'an",
+                highlight: "مِنْۢ بَعْدِ",
+                hukum: "Iqlab",
+                options: ["Iqlab", "Ikhfa", "Idgham Bighunnah", "Izhar Halqi"],
+                correctIndex: 0,
+                explanation: "Terdapat <strong>Nun Sukun (نْ)</strong> bertemu huruf <strong>Ba (ب)</strong>. Nun diubah menjadi suara Mim (م) disertai dengung."
+            },
+            // Slide 8: Tantangan 5 - Ikhfa
+            {
+                text: "مِنْ شَرِّ",
+                surah: "QS. Al-Falaq",
+                highlight: "مِنْ شَ",
+                hukum: "Ikhfa",
+                options: ["Idgham Bilaghunnah", "Izhar Halqi", "Iqlab", "Ikhfa"],
+                correctIndex: 3,
+                explanation: "Terdapat <strong>Nun Sukun (نْ)</strong> bertemu huruf <strong>Syin (ش)</strong>. Dibaca samar-samar dengan dengung."
+            },
+            // Bonus 1: Idgham Bighunnah (Nun sukun bertemu mim)
+            {
+                text: "مِنْ مَّاءٍ",
+                surah: "QS. At-Tariq: 6",
+                highlight: "مِنْ مَّا",
+                hukum: "Idgham Bighunnah",
+                options: ["Idgham Bighunnah", "Idgham Bilaghunnah", "Izhar Halqi", "Ikhfa"],
+                correctIndex: 0,
+                explanation: "Terdapat <strong>Nun Sukun (نْ)</strong> bertemu huruf <strong>Mim (م)</strong>. Dibaca masuk dan berdengung (Mim-maain)."
+            },
+            // Bonus 2: Izhar Halqi (Tanwin bertemu hamzah/alif)
+            {
+                text: "كُفُوًا أَحَدٌ",
+                surah: "QS. Al-Ikhlas: 4",
+                highlight: "وًا أ",
+                hukum: "Izhar Halqi",
+                options: ["Iqlab", "Ikhfa", "Izhar Halqi", "Idgham Bighunnah"],
+                correctIndex: 2,
+                explanation: "Terdapat <strong>Fathah Tanwin (ـً)</strong> bertemu <strong>Alif/Hamzah (أ)</strong>. Dibaca jelas (Kufuwan Ahad)."
+            }
+        ];
+
+        // Game State
+        let currentSlide = 1;
+        let score = 0;
+        let lives = 3;
+        let currentQuestionIndex = 0; // Maps to array index
+
+        // Maps slide ID to question index
+        const slideToQuestionMap = {
+            4: 0, 5: 1, 6: 2, 7: 3, 8: 4, 10: 5, 11: 6
+        };
+
+        // DOM Elements
+        const hud = document.getElementById('hud');
+        const scoreDisplay = document.getElementById('score-display');
+        const feedbackOverlay = document.getElementById('feedback-overlay');
+        const feedbackCard = document.getElementById('feedback-card');
+
+        function initGame() {
+            // Build Question Slides Dynamically
+            for (const [slideNum, qIndex] of Object.entries(slideToQuestionMap)) {
+                buildQuestionSlide(slideNum, questions[qIndex]);
+            }
+        }
+
+        function buildQuestionSlide(slideNum, qData) {
+            const container = document.getElementById(`slide-${slideNum}`);
+            if (!container) return;
+
+            // Generate 4 colored buttons
+            const btnColors = [
+                'bg-blue-500 border-b-blue-700 hover:bg-blue-400',
+                'bg-purple-500 border-b-purple-700 hover:bg-purple-400',
+                'bg-teal-500 border-b-teal-700 hover:bg-teal-400',
+                'bg-orange-500 border-b-orange-700 hover:bg-orange-400'
+            ];
+
+            let buttonsHTML = '';
+            qData.options.forEach((opt, idx) => {
+                const isCorrect = (idx === qData.correctIndex);
+                buttonsHTML += `
+                    <button onclick="checkAnswer(${isCorrect}, ${slideNum})" class="traffic-btn ${btnColors[idx]} text-white font-bold py-4 px-6 rounded-2xl text-xl border-b-4 active:border-b-0 active:mt-1 transition-all shadow-md">
+                        ${opt}
+                    </button>
+                `;
+            });
+
+            container.innerHTML = `
+                <div class="bg-white/95 w-full h-full rounded-3xl shadow-2xl border-4 border-gray-300 flex flex-col p-6 relative">
+                    
+                    <div class="flex justify-between items-center border-b-2 border-gray-200 pb-2 mb-4">
+                        <h2 class="text-2xl text-gray-600 heading-font">
+                            <i class="fa-solid fa-traffic-light text-red-500 mr-2"></i> Pos Pemeriksaan
+                        </h2>
+                        <span class="bg-gray-200 text-gray-600 px-3 py-1 rounded-full text-sm font-bold">${qData.surah}</span>
+                    </div>
+
+                    <div class="flex-1 flex flex-col items-center justify-center">
+                        <p class="text-gray-500 mb-2 font-bold uppercase tracking-wider text-sm">Baca dengan teliti:</p>
+                        
+                        <div class="bg-gray-50 border-2 border-gray-200 p-8 rounded-2xl w-full max-w-2xl text-center mb-8 shadow-inner relative">
+                             <!-- Magnifying glass decour -->
+                             <div class="absolute -top-5 -right-5 text-4xl text-blue-400 opacity-50 transform rotate-12">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                             </div>
+                             
+                             <p class="arabic-text text-5xl text-gray-800 leading-loose">
+                                ${qData.text.replace(qData.highlight, `<span class="text-red-600 font-bold bg-yellow-100 px-2 rounded">${qData.highlight}</span>`)}
+                             </p>
+                        </div>
+
+                        <p class="text-xl text-gray-700 font-bold mb-6 text-center">
+                            Hukum bacaan pada bagian yang <span class="text-red-600">disorot</span> adalah?
+                        </p>
+
+                        <div class="grid grid-cols-2 gap-4 w-full max-w-xl">
+                            ${buttonsHTML}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function goToSlide(num) {
+            document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+            document.getElementById(`slide-${num}`).classList.add('active');
+            currentSlide = num;
+
+            // Show/Hide HUD
+            if (num >= 4 && num <= 11 && num !== 9) {
+                hud.classList.remove('hidden');
+            } else {
+                hud.classList.add('hidden');
+            }
+
+            // Update Final Score if on last slide
+            if(num === 12) {
+                document.getElementById('final-score').innerText = score;
+            }
+        }
+
+        function startGames() {
+            score = 0;
+            lives = 3;
+            updateHUD();
+            // Reset hearts UI
+            for(let i=1; i<=3; i++) {
+                document.getElementById(`heart-${i}`).classList.remove('lost', 'fa-heart-crack');
+                document.getElementById(`heart-${i}`).classList.add('fa-heart');
+            }
+            goToSlide(4);
+        }
+
+        function updateHUD() {
+            scoreDisplay.innerText = score;
+        }
+
+        function loseLife() {
+            if (lives > 0) {
+                const heart = document.getElementById(`heart-${lives}`);
+                heart.classList.remove('fa-heart');
+                heart.classList.add('fa-heart-crack', 'lost');
+                lives--;
+            }
+        }
+
+        function checkAnswer(isCorrect, currentSlideNum) {
+            const qIndex = slideToQuestionMap[currentSlideNum];
+            const qData = questions[qIndex];
+            
+            feedbackOverlay.classList.add('show');
+            setTimeout(() => {
+                feedbackCard.classList.remove('scale-90');
+                feedbackCard.classList.add('scale-100');
+            }, 10);
+
+            const icon = document.getElementById('feedback-icon');
+            const title = document.getElementById('feedback-title');
+            const msg = document.getElementById('feedback-msg');
+            const detail = document.getElementById('feedback-detail');
+            const btn = document.getElementById('feedback-btn');
+
+            detail.classList.remove('hidden');
+            detail.innerHTML = `<p><strong>Penjelasan:</strong> ${qData.explanation}</p>`;
+
+            // Determine Next Slide
+            let nextSlideTarget;
+            if (currentSlideNum === 8) nextSlideTarget = 9; // Go to intermediate slide
+            else if (currentSlideNum === 11 || lives <= 1 && !isCorrect) nextSlideTarget = 12; // Go to end
+            else nextSlideTarget = currentSlideNum + 1;
+
+            if (isCorrect) {
+                // Correct Answer
+                score += 100;
+                updateHUD();
+                icon.innerHTML = '<i class="fa-solid fa-circle-check text-green-500"></i>';
+                title.innerText = "Hebat! Lampu Hijau";
+                title.className = "text-3xl heading-font mb-2 text-green-600";
+                msg.innerText = "Jawabanmu tepat sekali!";
+                btn.className = "btn-custom bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-10 rounded-full text-xl w-full mt-4";
+                
+                btn.onclick = () => {
+                    closeFeedback();
+                    goToSlide(nextSlideTarget);
+                };
+            } else {
+                // Wrong Answer
+                loseLife();
+                icon.innerHTML = '<i class="fa-solid fa-circle-xmark text-red-500"></i>';
+                title.innerText = "Lampu Merah! Stop!";
+                title.className = "text-3xl heading-font mb-2 text-red-600";
+                msg.innerText = `Jawaban belum tepat. Hukum yang benar adalah ${qData.hukum}.`;
+                btn.className = "btn-custom bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-10 rounded-full text-xl w-full mt-4 text-gray-900";
+                btn.innerHTML = 'Mengerti <i class="fa-solid fa-check"></i>';
+
+                btn.onclick = () => {
+                    closeFeedback();
+                    if (lives === 0) {
+                        goToSlide(12); // Game Over, go to end
+                    } else {
+                        goToSlide(nextSlideTarget);
+                    }
+                };
+            }
+        }
+
+        function closeFeedback() {
+            feedbackCard.classList.remove('scale-100');
+            feedbackCard.classList.add('scale-90');
+            setTimeout(() => {
+                feedbackOverlay.classList.remove('show');
+            }, 300);
+        }
+
+        function resetGame() {
+            goToSlide(1);
+        }
+
+        // Initialize on load
+        window.onload = () => {
+            initGame();
+        };
+
+    </script>
+</body>
+</html>
